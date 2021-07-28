@@ -1,5 +1,0 @@
-Crear archivo username.txt con usuario
-Crear archivo password.txt con contraseña
-Crear archivo randomAccounts.csv con los usuarios a tagear
-
-Descargar el driver para el navegador correspondiente y cambiar las asignaciones de 'driver' ej. driver = webdriver.Firefox()
