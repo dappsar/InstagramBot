@@ -133,7 +133,7 @@ def getDriver(chromeDriverPath, bravePath):
   return driver
 
 
-def commentSpam (link, driver, user, password, followers, followings):
+def commentSpam(link, driver, followers=[], followings=[]):
   try:
     log ('commentSpam ...')
 
@@ -145,27 +145,50 @@ def commentSpam (link, driver, user, password, followers, followings):
       Lines = f.readlines()
       accountsList = list(Lines)
 
+    log('getting link ...')
     driver.get(link)
     time.sleep(5) # 5 seconds
-    commentBox = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/div[1]/article/div[3]/section[3]/div/form/textarea')
+    # commentBox = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/div[1]/article/div[3]/section[3]/div/form/textarea')
     
-    while len(usersSent) < limitComments:
+    counter = 0
+
+    while (len(usersSent) < limitComments and counter < len(accountsList)):
       try:
-        counter = 0
-        user = accountsList[counter]
-        commentBox.click()
-        textBox = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/div[1]/article/div[3]/section[3]/div/form/textarea')
-        textBox.send_keys(user)
-        textBox.send_keys(Keys.ENTER)
-        publicar = driver.find_element_by_xpath('/html/body/div[1]/section/main/div/div[1]/article/div[3]/section[3]/div/form/button[2]')
-        publicar.click()
-        usersSent.append(user)
-        time.sleep(15) # 15 seconds
-        
+        user = accountsList[counter].strip().replace('\n', '')
+        log('starting to comment with user : ' + user)
+
+        # [1:]: Elimino el '@' del usuario dato que en followers y followings está sin ese caracter
+        # print('user sin @', user[1:])
+        userInLists = user[1:] in followers or user in followings
+        # print ('userInLists', userInLists)
+
+        if  (not userInLists):
+          # commentBox.click()
+          # textBox = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/div[1]/article/div[3]/section[3]/div/form/textarea')
+          # textBox.send_keys(user)
+          # textBox.send_keys(Keys.ENTER)
+
+          textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
+          time.sleep(1)
+          textBox[0].send_keys(user)
+          textBox[0].send_keys(Keys.ENTER)
+
+          # publicar = driver.find_element_by_xpath('/html/body/div[1]/section/main/div/div[1]/article/div[3]/section[3]/div/form/button[2]')
+          publicar = driver.find_elements_by_xpath("//button[contains(@class, 'sqdOP yWX7d    y3zKF     ')]")
+          time.sleep(1)
+          publicar[0].click()
+          usersSent.append(user)
+          time.sleep(15) # 15 seconds
+          log ('user ' + user + ' comentó en el post !!')
+        else:
+          log ('user ' + user + ' existe en seguidos o seguidores')
+
       except Exception as e:
         log('Se omite usuario ' + user + ' por error ' + getError(e))
-        time.sleep(1)
+        time.sleep(2)
         pass
+
+      counter += 1
 
   except Exception as e:
     log('CommentSpam error ' + getError(e))
@@ -192,7 +215,7 @@ def getFollowers(driver, username):
     names = [name.text for name in links if name.text != '']
 
     driver.find_element_by_xpath('/html/body/div[5]/div/div/div[1]/div/div[2]/button').click() #close button
-    log('followers: ' + names)
+    log('followers: ' + ','.join(names))
     return names
 
   except Exception as e:
@@ -223,7 +246,7 @@ def getFollowings(driver, username):
     names = [name.text for name in links if name.text != '']
 
     driver.find_element_by_xpath('/html/body/div[5]/div/div/div[1]/div/div[2]/button').click() #close button
-    log('followings: ' + names)
+    log('followings: ' + ','.join(names))
     return names
 
   except Exception as e:
@@ -280,7 +303,7 @@ def process (user, password, chromeDriverPath, bravePath):
         followers = getFollowers(driver, user)
         print(followers)
         print(followings)
-        # commentSpam("https://www.instagram.com/p/CR1panuC2W7/", driver, user, password, followers, followings)
+        commentSpam("https://www.instagram.com/p/CR1panuC2W7/", driver, followers, followings)
     except Exception as e:
       log('Se omite repetición de proceso por error ' + getError(e))
       pass
