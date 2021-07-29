@@ -221,7 +221,7 @@ def getFollowers(driver, username):
   except Exception as e:
     log('getFollowers error ' + getError(e))
     pass
-    return ''
+    return []
 
 
 def getFollowings(driver, username):
@@ -252,7 +252,7 @@ def getFollowings(driver, username):
   except Exception as e:
     log('getFollowings error ' + getError(e))
     pass
-    return ''
+    return []
 
 
 def disableAlerts(driver):
