@@ -17,9 +17,9 @@
 #
 # Comando para llamar al script
 #
-#    python3 instagramBot.py -u username -p password -q googleDriverPath+File - browserPathANdFile
-#    python3 instagramBot.py -u zaraza -p zaraza -g c:\\temp\\chromedriver.v92.exe -b "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
-#    python3 instagramBot.py -u zaraza -p zaraza -g c:\\temp\\chromedriver.v92.exe -b "C:\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
+#    python3 instagramBot.py -t postname -u username -p password -q googleDriverPath+File - browserPathANdFile
+#    python3 instagramBot.py -t CR1panuC2W7 -u zaraza -p zaraza -g c:\\temp\\chromedriver.v92.exe -b "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
+#    python3 instagramBot.py -t CR1panuC2W7 -u zaraza -p zaraza -g c:\\temp\\chromedriver.v92.exe -b "C:\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
 #
 # Referencias
 #   - js executor: https://stackoverflow.com/questions/7263824/get-html-source-of-webelement-in-selenium-webdriver-using-python
@@ -49,19 +49,22 @@ def getInputParams(argv):
   password = ''
   googledriver = ''
   bravepath = ''
+  postname = ''
 
   try:
-    opts, args = getopt.getopt(argv,"hu:p:g:b:",["uusername=","ppassword=", "ggoogledriver", "bbravepath"])
+    opts, args = getopt.getopt(argv,"ht:u:p:g:b:",["tpostname=", "uusername=","ppassword=", "ggoogledriver", "bbravepath"])
   except getopt.GetoptError:
     print ('Number of arguments: ' + str(len(sys.argv)) +  ' arguments.')
     print ('Argument List: ' + str(sys.argv))
-    print ('instagramBot.py -u <username> -p <password> -g <googledriver> -b <bravepath>')
+    print ('instagramBot.py -t <postname> -u <username> -p <password> -g <googledriver> -b <bravepath>')
     sys.exit(2)
 
   for opt, arg in opts:
     if opt == '-h':
       print ('instagramBot.py -u <username> -p <password> -g <googledriver>')
       sys.exit()
+    elif opt in ("-t", "--postname"):
+      postname = arg
     elif opt in ("-u", "--uusername"):
       user = arg
     elif opt in ("-p", "--ppassword"):
@@ -72,26 +75,29 @@ def getInputParams(argv):
       bravepath = arg
 
   if (len(sys.argv) == 1):
-      print ("Error: Tiene que pasar un argumento con usuario, contraseña, ruta+archivo de google chrome driver y de Brave", '\n')
-      print ('instagramBot.py -u <username> -p <password> -g <googledriver> - b <bravepath>', '\n')
-      print ('Ejemplo: python3 instagramBot.py -u pepe@gmail.com -p strongP1ssw4rd -g c:\\temp\\chromedriver.v89.exe -b C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe')
+      print ("Error: Tiene que pasar un argumento con postname, usuario, contraseña, ruta+archivo de google chrome driver y de Brave", '\n')
+      print ('instagramBot.py -t <postname> -u <username> -p <password> -g <googledriver> - b <bravepath>', '\n')
+      print ('Ejemplo: python3 instagramBot.py -t CR1panuC2W7 -u pepe@gmail.com -p strongP1ssw4rd -g c:\\temp\\chromedriver.v89.exe -b C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe')
       print('Descargar google chrome diver (no es el browser) aquí: https://chromedriver.chromium.org/downloads')
       print('\n')
       sys.exit()
+  elif (len(postname) == 0):
+      print ('Error: parámetro postname no válido')
+      sys.exit()
   elif (len(user) == 0):
-      print ('Error: usuario no válido')
+      print ('Error: parámetro usuario no válido')
       sys.exit()
   elif (len(password) == 0):
-      print ('Error: password no válida')
+      print ('Error: parámetro password no válida')
       sys.exit()
   elif (len(googledriver) == 0 or not os.path.isfile(googledriver)):
-      print ('Error: path y archivo de google chrome driver no válido')
+      print ('Error: parámetro path y archivo de google chrome driver no válido')
       sys.exit()
   elif (len(bravepath) == 0 or not os.path.isfile(bravepath)):
-      print ('Error: path y archivo de Browser Brave no válido')
+      print ('Error: parámetro path y archivo de Browser Brave no válido')
       sys.exit()
 
-  return user, password, googledriver, bravepath
+  return postname, user, password, googledriver, bravepath
 
 def getError(e):
   try:
@@ -133,8 +139,50 @@ def getDriver(chromeDriverPath, bravePath):
   driver = webdriver.Chrome(executable_path=chromeDriverPath, options=option, desired_capabilities=d)
   return driver
 
+def getLastCommentsDayFileName(postName):
+  try:
+    xdate = date.today()
+    year = str(xdate.year)
+    month = str(xdate.month).zfill(2)
+    day = str(xdate.day).zfill(2)
 
-def getLastCommentsFileName(postName):
+    return statsFolder+'/'+postName+'/'+year+month+day
+  except Exception as e:
+    log('Error en getLastCommentsDayFileName: ' + getError(e))
+
+
+def getLastCommentsDayCounter(postName):
+  try:
+    fileName = getLastCommentsDayFileName(postName)
+    fileExists = os.path.exists(fileName)
+    lastCommentsDayounter = 0
+
+    if (fileExists):
+      with open(fileName, 'r') as flast:
+        Lines = flast.readlines()
+        for line in Lines:
+            lastCommentsDayounter = int(line.strip())
+      flast.close()
+
+    return lastCommentsDayounter
+
+  except Exception as e:
+    log('Error en getLastCommentsDayCounter: ' + getError(e))
+
+
+def saveLastCommentsDayCounter(postName):
+  try:
+    fileName = getLastCommentsDayFileName(postName)
+    lastCommentsDayCounter = getLastCommentsDayCounter(postName)
+
+    with open(fileName, 'w') as flast:
+      flast.write(str(lastCommentsDayCounter+1))
+
+  except Exception as e:
+    log('Error en saveLastCommentsDayCounter: ' + getError(e))
+
+
+def getLastCommentsHourFileName(postName):
   try:
     xdate = date.today()
     year = str(xdate.year)
@@ -142,46 +190,40 @@ def getLastCommentsFileName(postName):
     day = str(xdate.day).zfill(2)
     hour = str(datetime.now().hour).zfill(2)
 
-    print(statsFolder+'/'+postName+'/'+year+month+day+hour)
     return statsFolder+'/'+postName+'/'+year+month+day+hour
   except Exception as e:
-    log('Error en getLastCommentsFileName: ' + getError(e))
+    log('Error en getLastCommentsHourFileName: ' + getError(e))
 
 
-def getLastCommentsCounter(postName):
+def getLastCommentsHourCounter(postName):
   try:
-    fileName = getLastCommentsFileName(postName)
+    fileName = getLastCommentsHourFileName(postName)
     fileExists = os.path.exists(fileName)
-    lastCommentsCounter = 0
+    lastCommentsHourCounter = 0
 
     if (fileExists):
       with open(fileName, 'r') as flast:
         Lines = flast.readlines()
         for line in Lines:
-            lastCommentsCounter = int(line.strip())
+            lastCommentsHourCounter = int(line.strip())
       flast.close()
 
-    return lastCommentsCounter
+    return lastCommentsHourCounter
 
   except Exception as e:
-    log('Error en getLastCommentsCounter: ' + getError(e))
+    log('Error en getLastCommentsHourCounter: ' + getError(e))
 
 
-def saveLastCommentsCounter(postName):
+def saveLastCommentsHourCounter(postName):
   try:
-    print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-    fileName = getLastCommentsFileName(postName)
-    print('fffffffffffffffffffffffffffffff')
-    lastCommentsCounter = getLastCommentsCounter(postName)
+    fileName = getLastCommentsHourFileName(postName)
+    lastCommentsHourCounter = getLastCommentsHourCounter(postName)
 
-    print('filename', fileName)
-    print('lastCommentsCounter', lastCommentsCounter)
     with open(fileName, 'w') as flast:
-      print('hhhhhhhhhhhhhhhhhhhhhhhhhhhhh')
-      flast.write(str(lastCommentsCounter+1))
+      flast.write(str(lastCommentsHourCounter+1))
 
   except Exception as e:
-    log('Error en saveLastComments: ' + getError(e))
+    log('Error en saveLastCommentsHourCounter: ' + getError(e))
 
 
 def getPostFileName(postName):
@@ -222,8 +264,41 @@ def userAlreadyCommentInPost(postName, user):
 def exceedsLimits(postName):
   hourLimits = 60
   dayLimits = 1440
-  currentCount = getLastCommentsCounter(postName)
-  return (currentCount+1 > hourLimits or currentCount+1 > dayLimits)
+  currentHourCounter = getLastCommentsHourCounter(postName)
+  currentDayCounter = getLastCommentsHourCounter(postName)
+  return (currentHourCounter+1 > hourLimits or currentDayCounter+1 > dayLimits)
+
+
+def makeComment(driver, user):
+  try:
+    # comment
+    textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
+    time.sleep(3) # to avoid error element is not interactable
+    textBox[0].click()
+    time.sleep(3)
+    textBox[0].clear()
+    time.sleep(3)
+    textBox[0].send_keys(user)
+    time.sleep(2)
+    textBox[0].send_keys(Keys.ENTER)
+    time.sleep(2)
+    textBox[0].send_keys(Keys.RETURN)
+    time.sleep(2)
+    textBox[0].send_keys('\n')
+    time.sleep(10) # wait to comment
+
+    try:
+      driver.refresh() # por error al comentar, habilitación del campo
+      time.sleep(10)
+    except:
+      pass
+    #publicar = driver.find_elements_by_xpath("//button[contains(@class, 'sqdOP yWX7d    y3zKF     ')]")
+    #time.sleep(3)
+    #publicar[0].click()
+    return True
+  except Exception as e:
+    log('Error makeComment with user ' + user + ': ' + getError(e))
+  return False
 
 
 def commentSpam(postName, driver, allowRepeated, followers=[], followings=[]):
@@ -247,46 +322,24 @@ def commentSpam(postName, driver, allowRepeated, followers=[], followings=[]):
         user = accountsList[counter].strip().replace('\n', '')
         log('starting to comment with user : ' + user)
 
-        if (not allowRepeated and userAlreadyCommentInPost(postName, user)):
+        # [1:]: Elimino el '@' del usuario dato que en followers y followings está sin ese caracter
+        userInLists = user[1:] in followers or user in followings
+        blockedToComment = (not allowRepeated and userAlreadyCommentInPost(postName, user))
+
+        if  (userInLists):
+          log ('user ' + user + ' existe en seguidos o seguidores')
+
+        if (blockedToComment):
           log('El usuario : ' + user + " ya comentó en éste post")
 
-      # [1:]: Elimino el '@' del usuario dato que en followers y followings está sin ese caracter
-        # print('user sin @', user[1:])
-        userInLists = user[1:] in followers or user in followings
-        # print ('userInLists', userInLists)
-
-        if  (not userInLists):
-          # clean
-          try:
-            driver.refresh() # por error al comentar, habilitación del campo
-            time.sleep(3)
-
-            #textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
-            #textBox[0].click()
-            #textBox[0].send_keys(Keys.BACKSPACE) # (opción 1) para que no acumule usuarios en el control
-            #textBox[0].send_keys(Keys.CONTROL + "a") # (opción 2) para que no acumule usuarios en el control (combinado con la línea debajo)
-            #textBox[0].send_keys(Keys.DELETE) # para que no acumule usuarios en el control
-            #textBox[0].send_keys(Keys.ENTER)
-          except:
-            pass
-
-          #time.sleep(1)
-          # comment
-          textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
-          #extBox[0].click()
-          textBox[0].send_keys(user)
-          textBox[0].send_keys(Keys.ENTER)
-
-          publicar = driver.find_elements_by_xpath("//button[contains(@class, 'sqdOP yWX7d    y3zKF     ')]")
-          time.sleep(1)
-          publicar[0].click()
-          usersSent.append(user)
-          time.sleep(15) # 15 seconds
-          log ('user ' + user + ' comentó en el post !!')
-          saveLastCommentsCounter(postName)
-          saveWhoComment(link, user)
-        else:
-          log ('user ' + user + ' existe en seguidos o seguidores')
+        if (not userInLists and not blockedToComment):
+          if (makeComment (driver, user)):
+            usersSent.append(user)
+            log ('user ' + user + ' comentó en el post !!')
+            saveLastCommentsHourCounter(postName)
+            saveLastCommentsDayCounter(postName)
+            saveWhoComment(postName, user)
+            time.sleep(5)
 
       except Exception as e:
         log('Se omite usuario ' + user + ' por error ' + getError(e))
@@ -407,11 +460,9 @@ def process (user, password, postName, chromeDriverPath, bravePath):
           disableAlerts(driver) # eliminar alertas de notificación
           followings = getFollowings(driver, user)
           followers = getFollowers(driver, user)
-          print(followers)
-          print(followings)
           commentSpam(postName, driver, False, followers, followings)
         else:
-          log('Se excede límite de comentaros, esperando de 1 hora ...')
+          log('Se excede límite de comentarios, esperando 1 hora ...')
           time.sleep(3600)
     except Exception as e:
       log('Se omite repetición de proceso por error ' + getError(e))
@@ -439,16 +490,12 @@ def main(argv): # Start here!
   if not os.path.exists(statsFolder):
     os.makedirs(statsFolder)
 
-  username, password, chromeDriverPath, bravePath = getInputParams(argv)
-  posts = getPosts()
+  postName, username, password, chromeDriverPath, bravePath = getInputParams(argv)
 
-  if (len(posts) == 0):
-    log ('No se encontraron posts en el archivo posts.txt')
-  else:
-    for post in posts:
-      if not os.path.exists(statsFolder+'/'+post):
-        os.makedirs(statsFolder+'/'+post)
-      process (username, password, post, chromeDriverPath, bravePath)
+  if not os.path.exists(statsFolder+'/'+postName):
+    os.makedirs(statsFolder+'/'+postName)
+
+  process(username, password, postName, chromeDriverPath, bravePath)
 
 
 if __name__ == "__main__":

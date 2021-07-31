@@ -19,9 +19,9 @@
 
 ## Comando para llamar al script
 
-    python3 instagramBot.py -u username -p password -q googleDriverPath+File - browserPathANdFile
-    python3 instagramBot.py -u zaraza -p zaraza -g c:\\temp\\chromedriver.v92.exe -b "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
-    python3 instagramBot.py -u zaraza -p zaraza -g c:\\temp\\chromedriver.v92.exe -b "C:\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
+    python3 instagramBot.py -t postname -u username -p password -q googleDriverPath+File - browserPathANdFile
+    python3 instagramBot.py -t postname -u zaraza -p zaraza -g c:\\temp\\chromedriver.v92.exe -b "C:\\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
+    python3 instagramBot.py -t CR88VLaigO0 -u zaraza -p zaraza -g c:\\temp\\chromedriver.v92.exe -b "C:\Program Files (x86)\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
 
 ---
 
