@@ -172,7 +172,7 @@ def saveLastCommentsCounter():
     lastCommentsCounter = getLastCommentsCounter()
 
     with open(fileName, 'w') as flast:
-      flast.write(lastCommentsCounter+1)
+      flast.write(str(lastCommentsCounter+1))
 
   except Exception as e:
     log('Error en saveLastComments: ' + getError(e))
@@ -215,18 +215,22 @@ def commentSpam(link, driver, followers=[], followings=[]):
         # print ('userInLists', userInLists)
 
         if  (not userInLists):
-          # commentBox.click()
-          # textBox = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/div[1]/article/div[3]/section[3]/div/form/textarea')
-          # textBox.send_keys(user)
-          # textBox.send_keys(Keys.ENTER)
+          # clean
+          try:
+            textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
+            textBox[0].send_keys(Keys.BACKSPACE) # (opción 1) para que no acumule usuarios en el control
+            textBox[0].send_keys(Keys.CONTROL + "a") # (opción 2) para que no acumule usuarios en el control (combinado con la línea debajo)
+            textBox[0].send_keys(Keys.DELETE) # para que no acumule usuarios en el control
+            textBox[0].send_keys(Keys.ENTER)
+          except:
+            pass
 
-          textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
           time.sleep(1)
-          textBox[0].send_keys('') # para que no acumule usuarios en el control
+          # comment
+          textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
           textBox[0].send_keys(user)
           textBox[0].send_keys(Keys.ENTER)
 
-          # publicar = driver.find_element_by_xpath('/html/body/div[1]/section/main/div/div[1]/article/div[3]/section[3]/div/form/button[2]')
           publicar = driver.find_elements_by_xpath("//button[contains(@class, 'sqdOP yWX7d    y3zKF     ')]")
           time.sleep(1)
           publicar[0].click()
@@ -367,7 +371,7 @@ def process (user, password, chromeDriverPath, bravePath):
       pass
 
     # https://www.zyxware.com/articles/5552/what-is-close-and-quit-commands-in-selenium-webdriver
-    driver.quit() 
+    driver.quit()
     log('Esperando 1 minuto ...')
     time.sleep(60) 
 
