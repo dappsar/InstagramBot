@@ -41,9 +41,8 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.common.keys import Keys
 
-#from random import seed
-#from random import randint
-
+logsFolder = './logs'
+statsFolder = './stats'
 
 def getInputParams(argv):
   user = ''
@@ -107,7 +106,7 @@ def log(msg):
   date = str(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
   data = date+': '+msg
-  filename = './logs/bot.log'
+  filename = logsFolder+'/bot.log'
 
   print(data)
 
@@ -135,21 +134,23 @@ def getDriver(chromeDriverPath, bravePath):
   return driver
 
 
-def getLastCommentsFileName():
+def getLastCommentsFileName(postName):
   try:
     xdate = date.today()
     year = str(xdate.year)
     month = str(xdate.month).zfill(2)
     day = str(xdate.day).zfill(2)
     hour = str(datetime.now().hour).zfill(2)
-    return './stats/'+year+month+day+hour
+
+    print(statsFolder+'/'+postName+'/'+year+month+day+hour)
+    return statsFolder+'/'+postName+'/'+year+month+day+hour
   except Exception as e:
     log('Error en getLastCommentsFileName: ' + getError(e))
 
 
-def getLastCommentsCounter():
+def getLastCommentsCounter(postName):
   try:
-    fileName = getLastCommentsFileName()
+    fileName = getLastCommentsFileName(postName)
     fileExists = os.path.exists(fileName)
     lastCommentsCounter = 0
 
@@ -166,50 +167,90 @@ def getLastCommentsCounter():
     log('Error en getLastCommentsCounter: ' + getError(e))
 
 
-def saveLastCommentsCounter():
+def saveLastCommentsCounter(postName):
   try:
-    fileName = getLastCommentsFileName()
-    lastCommentsCounter = getLastCommentsCounter()
+    print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    fileName = getLastCommentsFileName(postName)
+    print('fffffffffffffffffffffffffffffff')
+    lastCommentsCounter = getLastCommentsCounter(postName)
 
+    print('filename', fileName)
+    print('lastCommentsCounter', lastCommentsCounter)
     with open(fileName, 'w') as flast:
+      print('hhhhhhhhhhhhhhhhhhhhhhhhhhhhh')
       flast.write(str(lastCommentsCounter+1))
 
   except Exception as e:
     log('Error en saveLastComments: ' + getError(e))
 
 
-def exceedsLimits():
+def getPostFileName(postName):
+  try:
+    folderName = statsFolder+'/'+postName
+    fileName = folderName+'/'+postName
+    return fileName
+
+  except Exception as e:
+    log('Error en getPostFileName: ' + getError(e))
+
+
+def saveWhoComment(postName, user):
+  try:
+    fileName = getPostFileName(postName)
+    with open(fileName, 'a') as flast:
+        flast.write(str(user)+'\n')
+
+  except Exception as e:
+    log('Error en saveLastCommentsCounter: ' + getError(e))
+
+
+def userAlreadyCommentInPost(postName, user):
+  try:
+    fileName = getPostFileName(postName)
+    fileExists = os.path.exists(fileName)
+
+    if (fileExists):
+      with open(fileName) as myfile:
+        return user in myfile.read()
+
+  except Exception as e:
+    log('Error en userAlreadyCommentInPost: ' + getError(e))
+
+  return False
+
+
+def exceedsLimits(postName):
   hourLimits = 60
   dayLimits = 1440
-  currentCount = getLastCommentsCounter()
+  currentCount = getLastCommentsCounter(postName)
   return (currentCount+1 > hourLimits or currentCount+1 > dayLimits)
 
 
-def commentSpam(link, driver, followers=[], followings=[]):
+def commentSpam(postName, driver, allowRepeated, followers=[], followings=[]):
   try:
     log ('commentSpam ...')
 
     usersSent = [""]
-    alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
-    limitComments = 49
+    counter = 0
 
     with open('randomAccounts.txt', newline='\n') as f:
       Lines = f.readlines()
       accountsList = list(Lines)
 
     log('getting link ...')
+    link = 'https://www.instagram.com/p/'+postName+'/'
     driver.get(link)
-    time.sleep(5) # 5 seconds
-    # commentBox = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/div[1]/article/div[3]/section[3]/div/form/textarea')
+    time.sleep(5)
     
-    counter = 0
-
-    while (len(usersSent) < limitComments and counter < len(accountsList)):
+    while (not exceedsLimits(postName) and counter < len(accountsList)):
       try:
         user = accountsList[counter].strip().replace('\n', '')
         log('starting to comment with user : ' + user)
 
-        # [1:]: Elimino el '@' del usuario dato que en followers y followings está sin ese caracter
+        if (not allowRepeated and userAlreadyCommentInPost(postName, user)):
+          log('El usuario : ' + user + " ya comentó en éste post")
+
+      # [1:]: Elimino el '@' del usuario dato que en followers y followings está sin ese caracter
         # print('user sin @', user[1:])
         userInLists = user[1:] in followers or user in followings
         # print ('userInLists', userInLists)
@@ -217,17 +258,22 @@ def commentSpam(link, driver, followers=[], followings=[]):
         if  (not userInLists):
           # clean
           try:
-            textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
-            textBox[0].send_keys(Keys.BACKSPACE) # (opción 1) para que no acumule usuarios en el control
-            textBox[0].send_keys(Keys.CONTROL + "a") # (opción 2) para que no acumule usuarios en el control (combinado con la línea debajo)
-            textBox[0].send_keys(Keys.DELETE) # para que no acumule usuarios en el control
-            textBox[0].send_keys(Keys.ENTER)
+            driver.refresh() # por error al comentar, habilitación del campo
+            time.sleep(3)
+
+            #textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
+            #textBox[0].click()
+            #textBox[0].send_keys(Keys.BACKSPACE) # (opción 1) para que no acumule usuarios en el control
+            #textBox[0].send_keys(Keys.CONTROL + "a") # (opción 2) para que no acumule usuarios en el control (combinado con la línea debajo)
+            #textBox[0].send_keys(Keys.DELETE) # para que no acumule usuarios en el control
+            #textBox[0].send_keys(Keys.ENTER)
           except:
             pass
 
-          time.sleep(1)
+          #time.sleep(1)
           # comment
           textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
+          #extBox[0].click()
           textBox[0].send_keys(user)
           textBox[0].send_keys(Keys.ENTER)
 
@@ -237,7 +283,8 @@ def commentSpam(link, driver, followers=[], followings=[]):
           usersSent.append(user)
           time.sleep(15) # 15 seconds
           log ('user ' + user + ' comentó en el post !!')
-          saveLastCommentsCounter()
+          saveLastCommentsCounter(postName)
+          saveWhoComment(link, user)
         else:
           log ('user ' + user + ' existe en seguidos o seguidores')
 
@@ -349,20 +396,20 @@ def login(username, password, driver):
     return False
 
 
-def process (user, password, chromeDriverPath, bravePath):
+def process (user, password, postName, chromeDriverPath, bravePath):
   while True:
-    log('Starting to process ...')
+    log('Starting to process with post ' + postName + ' ...')
     driver = getDriver(chromeDriverPath, bravePath)
 
     try:
       if (login(user, password, driver)):
-        if (not exceedsLimits()):
+        if (not exceedsLimits(postName)):
           disableAlerts(driver) # eliminar alertas de notificación
           followings = getFollowings(driver, user)
           followers = getFollowers(driver, user)
           print(followers)
           print(followings)
-          commentSpam("https://www.instagram.com/p/CR1panuC2W7/", driver, followers, followings)
+          commentSpam(postName, driver, False, followers, followings)
         else:
           log('Se excede límite de comentaros, esperando de 1 hora ...')
           time.sleep(3600)
@@ -376,14 +423,32 @@ def process (user, password, chromeDriverPath, bravePath):
     time.sleep(60) 
 
 
+def getPosts():
+  try:
+    with open('posts.txt', newline='\n') as fPosts:
+      Lines = fPosts.readlines()
+      return list(Lines)
+  except Exception as e:
+    log('Error getPosts: ' + getError(e))
+
+  return []
+
 def main(argv): # Start here!
-  if not os.path.exists('./logs/'):
-    os.makedirs('./logs/')
-  if not os.path.exists('./stats/'):
-    os.makedirs('./stats/')
+  if not os.path.exists(logsFolder):
+    os.makedirs(logsFolder)
+  if not os.path.exists(statsFolder):
+    os.makedirs(statsFolder)
 
   username, password, chromeDriverPath, bravePath = getInputParams(argv)
-  process (username, password, chromeDriverPath, bravePath)
+  posts = getPosts()
+
+  if (len(posts) == 0):
+    log ('No se encontraron posts en el archivo posts.txt')
+  else:
+    for post in posts:
+      if not os.path.exists(statsFolder+'/'+post):
+        os.makedirs(statsFolder+'/'+post)
+      process (username, password, post, chromeDriverPath, bravePath)
 
 
 if __name__ == "__main__":
