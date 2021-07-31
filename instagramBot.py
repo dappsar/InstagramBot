@@ -26,6 +26,8 @@
 #
 import time
 from datetime import datetime
+from datetime import date
+import os.path
 
 import os
 import sys
@@ -39,8 +41,8 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.common.keys import Keys
 
-from random import seed
-from random import randint
+#from random import seed
+#from random import randint
 
 
 def getInputParams(argv):
@@ -133,6 +135,56 @@ def getDriver(chromeDriverPath, bravePath):
   return driver
 
 
+def getLastCommentsFileName():
+  try:
+    xdate = date.today()
+    year = str(xdate.year)
+    month = str(xdate.month).zfill(2)
+    day = str(xdate.day).zfill(2)
+    hour = str(datetime.now().hour).zfill(2)
+    return './stats/'+year+month+day+hour
+  except Exception as e:
+    log('Error en getLastCommentsFileName: ' + getError(e))
+
+
+def getLastCommentsCounter():
+  try:
+    fileName = getLastCommentsFileName()
+    fileExists = os.path.exists(fileName)
+    lastCommentsCounter = 0
+
+    if (fileExists):
+      with open(fileName, 'r') as flast:
+        Lines = flast.readlines()
+        for line in Lines:
+            lastCommentsCounter = int(line.strip())
+      flast.close()
+
+    return lastCommentsCounter
+
+  except Exception as e:
+    log('Error en getLastCommentsCounter: ' + getError(e))
+
+
+def saveLastCommentsCounter():
+  try:
+    fileName = getLastCommentsFileName()
+    lastCommentsCounter = getLastCommentsCounter()
+
+    with open(fileName, 'w') as flast:
+      flast.write(lastCommentsCounter+1)
+
+  except Exception as e:
+    log('Error en saveLastComments: ' + getError(e))
+
+
+def exceedsLimits():
+  hourLimits = 60
+  dayLimits = 1440
+  currentCount = getLastCommentsCounter()
+  return (currentCount+1 > hourLimits or currentCount+1 > dayLimits)
+
+
 def commentSpam(link, driver, followers=[], followings=[]):
   try:
     log ('commentSpam ...')
@@ -170,6 +222,7 @@ def commentSpam(link, driver, followers=[], followings=[]):
 
           textBox = driver.find_elements_by_xpath("//textarea[contains(@class, 'Ypffh')]")
           time.sleep(1)
+          textBox[0].send_keys('') # para que no acumule usuarios en el control
           textBox[0].send_keys(user)
           textBox[0].send_keys(Keys.ENTER)
 
@@ -180,6 +233,7 @@ def commentSpam(link, driver, followers=[], followings=[]):
           usersSent.append(user)
           time.sleep(15) # 15 seconds
           log ('user ' + user + ' comentó en el post !!')
+          saveLastCommentsCounter()
         else:
           log ('user ' + user + ' existe en seguidos o seguidores')
 
@@ -298,12 +352,16 @@ def process (user, password, chromeDriverPath, bravePath):
 
     try:
       if (login(user, password, driver)):
-        disableAlerts(driver) # eliminar alertas de notificación
-        followings = getFollowings(driver, user)
-        followers = getFollowers(driver, user)
-        print(followers)
-        print(followings)
-        commentSpam("https://www.instagram.com/p/CR1panuC2W7/", driver, followers, followings)
+        if (not exceedsLimits()):
+          disableAlerts(driver) # eliminar alertas de notificación
+          followings = getFollowings(driver, user)
+          followers = getFollowers(driver, user)
+          print(followers)
+          print(followings)
+          commentSpam("https://www.instagram.com/p/CR1panuC2W7/", driver, followers, followings)
+        else:
+          log('Se excede límite de comentaros, esperando de 1 hora ...')
+          time.sleep(3600)
     except Exception as e:
       log('Se omite repetición de proceso por error ' + getError(e))
       pass
@@ -317,6 +375,8 @@ def process (user, password, chromeDriverPath, bravePath):
 def main(argv): # Start here!
   if not os.path.exists('./logs/'):
     os.makedirs('./logs/')
+  if not os.path.exists('./stats/'):
+    os.makedirs('./stats/')
 
   username, password, chromeDriverPath, bravePath = getInputParams(argv)
   process (username, password, chromeDriverPath, bravePath)
